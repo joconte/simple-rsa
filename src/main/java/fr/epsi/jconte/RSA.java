@@ -5,10 +5,11 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Random;
 
+
 public class RSA {
 
-    // public = (N, e)
-    // privée = (N, d)
+    // Clé publique = (N, e)
+    // Clé privée = (N, d)
 
     private BigInteger p;
     private BigInteger q;
@@ -16,11 +17,18 @@ public class RSA {
     private BigInteger phi;
     private BigInteger e;
     private BigInteger d;
-    private int bitlength = 1024;
+    private int bitlength = 16;
     private Random r;
 
     public RSA() {
 
+        generationDesClefs();
+    }
+
+    private void generationDesClefs() {
+
+        // Génération des clés
+        System.out.println("Génération des clefs...");
         r = new Random();
         p = BigInteger.probablePrime(bitlength, r);
         q = BigInteger.probablePrime(bitlength, r);
@@ -28,12 +36,30 @@ public class RSA {
         phi = p.subtract(BigInteger.ONE).multiply(q.subtract(BigInteger.ONE));
         e = BigInteger.probablePrime(bitlength / 2, r);
 
-        while (phi.gcd(e).compareTo(BigInteger.ONE) > 0 && e.compareTo(phi) < 0) {
+        while (gcdByEuclidsAlgorithm(phi.longValue(), e.longValue()) > 1 && e.longValue() < phi.longValue()) {
 
             e.add(BigInteger.ONE);
         }
 
-        d = e.modInverse(phi);
+        long dLong = modInverse(e.longValue(), phi.longValue());
+        d = BigInteger.valueOf(dLong);
+
+        System.out.println("p = " + p);
+        System.out.println("q = " + q);
+        System.out.println("N = p * q = " + N);
+        System.out.println("phi = (p - 1) * (q - 1) = " + phi);
+        System.out.println("e = " + e);
+        System.out.println("d = " + d);
+        System.out.println("Clé publique : (" + N + ", " + e + ")");
+        System.out.println("Clé privée : (" + N + ", " + d + ")");
+    }
+
+    private static byte[] preparationDuMessage(String message) {
+
+        byte[] messageInBytes = message.getBytes();
+        System.out.println("Transformation du message : " + message + " (String) -> " + bytesToString(messageInBytes) + " (byte[])");
+
+        return messageInBytes;
     }
 
     public RSA(BigInteger e, BigInteger d, BigInteger N) {
@@ -43,33 +69,29 @@ public class RSA {
         this.N = N;
     }
 
-    @SuppressWarnings("deprecation")
     public static void main(String[] args) throws IOException {
 
         RSA rsa = new RSA();
-        //RSA rsa = new RSA(BigInteger.valueOf(7), BigInteger.valueOf(23), BigInteger.valueOf(187));
 
         DataInputStream in = new DataInputStream(System.in);
 
-        String teststring;
+        String messageAChiffrer;
 
-        System.out.println("Enter the plain text:");
+        System.out.println("Entrez le message à chiffrer : ");
 
-        teststring = in.readLine();
+        messageAChiffrer = in.readLine();
 
-        System.out.println("Encrypting String: " + teststring);
-
-        System.out.println("String in Bytes: " + bytesToString(teststring.getBytes()));
+        byte[] messagePrepare = preparationDuMessage(messageAChiffrer);
 
         // encrypt
-        byte[] encrypted = rsa.encrypt(teststring.getBytes());
+        byte[] messageChiffre = rsa.encrypt(messagePrepare);
+
+        System.out.println("Message chiffré : " + new String(messageChiffre) + " (String)");
 
         // decrypt
-        byte[] decrypted = rsa.decrypt(encrypted);
+        byte[] messageDechiffre = rsa.decrypt(messageChiffre);
 
-        System.out.println("Decrypting Bytes: " + bytesToString(decrypted));
-
-        System.out.println("Decrypted String: " + new String(decrypted));
+        System.out.println("Message déchiffré : " + new String(messageDechiffre) + " (String)");
     }
 
 
@@ -86,37 +108,53 @@ public class RSA {
     }
 
 
-    // Encrypt message
+    // Chiffrement du message
     public byte[] encrypt(byte[] message) {
 
-        return (new BigInteger(message)).modPow(e, N).toByteArray();
+        System.out.println("Chiffrage du message...");
+        System.out.println("Avant : " + bytesToString(message) + " (byte[])");
+
+        // modPow -> (message ^ e) % N
+        byte[] encryptedMessage = (new BigInteger(message)).modPow(e, N).toByteArray();
+
+        System.out.println("Après : " + bytesToString(encryptedMessage) + " (byte[])");
+
+        return encryptedMessage;
     }
 
-    // Decrypt message
+    // Déchiffrement du message
     public byte[] decrypt(byte[] message) {
 
-        return (new BigInteger(message)).modPow(d, N).toByteArray();
+        System.out.println("Dechiffrement du message...");
+        System.out.println("Avant : " + bytesToString(message) + " (byte[])");
+
+        // modPow -> (message ^ e) % N
+        byte[] clearMessage = (new BigInteger(message)).modPow(d, N).toByteArray();
+
+        System.out.println("Après : " + bytesToString(clearMessage) + " (byte[])");
+
+        return clearMessage;
     }
 
-    int gcdByEuclidsAlgorithm(int n1, int n2) {
+    long gcdByEuclidsAlgorithm(long n1, long n2) {
         if (n2 == 0) {
             return n1;
         }
         return gcdByEuclidsAlgorithm(n2, n1 % n2);
     }
 
-    int modInverse(int a, int m) {
-        int m0 = m;
-        int y = 0, x = 1;
+    long modInverse(long a, long m) {
+        long m0 = m;
+        long y = 0, x = 1;
 
         if (m == 1)
             return 0;
 
         while (a > 1) {
             // q is quotient
-            int q = a / m;
+            long q = a / m;
 
-            int t = m;
+            long t = m;
 
             // m is remainder now, process
             // same as Euclid's algo
