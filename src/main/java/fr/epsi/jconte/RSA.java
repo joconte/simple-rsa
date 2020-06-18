@@ -17,7 +17,7 @@ public class RSA {
     private BigInteger phi;
     private BigInteger e;
     private BigInteger d;
-    private int bitlength = 16;
+    private int bitlength = 1024;
     private Random r;
 
     public RSA() {
@@ -36,13 +36,14 @@ public class RSA {
         phi = p.subtract(BigInteger.ONE).multiply(q.subtract(BigInteger.ONE));
         e = BigInteger.probablePrime(bitlength / 2, r);
 
-        while (gcdByEuclidsAlgorithm(phi.longValue(), e.longValue()) > 1 && e.longValue() < phi.longValue()) {
-
+        // phi.gcd(e) -> gcd par l'algorithme d'Euclid
+        while (phi.gcd(e).compareTo(BigInteger.ONE) > 0 && e.compareTo(phi) < 0)
+        {
             e.add(BigInteger.ONE);
         }
 
-        long dLong = modInverse(e.longValue(), phi.longValue());
-        d = BigInteger.valueOf(dLong);
+        // Inverse modulaire
+        d = e.modInverse(phi);
 
         System.out.println("p = " + p);
         System.out.println("q = " + q);
@@ -60,13 +61,6 @@ public class RSA {
         System.out.println("Transformation du message : " + message + " (String) -> " + bytesToString(messageInBytes) + " (byte[])");
 
         return messageInBytes;
-    }
-
-    public RSA(BigInteger e, BigInteger d, BigInteger N) {
-
-        this.e = e;
-        this.d = d;
-        this.N = N;
     }
 
     public static void main(String[] args) throws IOException {
@@ -111,7 +105,7 @@ public class RSA {
     // Chiffrement du message
     public byte[] encrypt(byte[] message) {
 
-        System.out.println("Chiffrage du message...");
+        System.out.println("Chiffement du message...");
         System.out.println("Avant : " + bytesToString(message) + " (byte[])");
 
         // modPow -> (message ^ e) % N
@@ -136,6 +130,12 @@ public class RSA {
         return clearMessage;
     }
 
+    /**
+     * Algorithme d'euclid permettant de faire le gcd mais non utilisable sur des grands nombres comme le BigInteger.
+     * @param n1
+     * @param n2
+     * @return
+     */
     long gcdByEuclidsAlgorithm(long n1, long n2) {
         if (n2 == 0) {
             return n1;
@@ -143,6 +143,12 @@ public class RSA {
         return gcdByEuclidsAlgorithm(n2, n1 % n2);
     }
 
+    /**
+     * Algorithme d'Euclide étendu permettant de faire l'inverse modulaire mais non utilisable sur les BigInteger.
+     * @param a
+     * @param m
+     * @return
+     */
     long modInverse(long a, long m) {
         long m0 = m;
         long y = 0, x = 1;
